@@ -18,12 +18,26 @@ class ProductMarginClassification(models.Model):
 
     # Default Section
     def _default_company_id(self):
-        return self.env['res.company'].browse(self.env.user._get_company())
+        return self.env.user.company_id.id
 
     # Column Section
     name = fields.Char(string='Name', required=True)
 
-    margin = fields.Float(string='Margin', required=True)
+    markup = fields.Float(
+        string='Markup', required=True, old_name='margin',
+        digits=dp.get_precision('Margin Rate'),
+        help="Value that help you to compute the sale price, based on your"
+        " cost, as defined: Sale Price = (Cost * (1 + Markup))\n"
+        "It is computed with the following formula"
+        " Markup = (Sale Price - Cost) / Cost")
+
+    profit_margin = fields.Float(
+        string='Profit Margin', compute='_compute_profit_margin',
+        inverse='_inverse_profit_margin',
+        digits=dp.get_precision('Margin Rate'),
+        help="Also called 'Net margin' or 'Net Profit Ratio'.\n"
+        "It is computed with the following formula"
+        " Profit Margin = (Sale Price - Cost) / Sale Price")
 
     company_id = fields.Many2one(
         comodel_name='res.company', string='Company',
@@ -68,7 +82,33 @@ class ProductMarginClassification(models.Model):
         decimal_obj = self.env['decimal.precision']
         return 10 ** (- decimal_obj.precision_get('Product Price'))
 
+    # constrains Section
+    @api.constrains('markup')
+    def _check_markup(self):
+        for classification in self:
+            if classification.markup == -1:
+                raise exceptions.Warning(_("-1 is not a valid Markup."))
+
+    @api.multi
+    def _inverse_profit_margin(self):
+        pass
+
+    @api.onchange('profit_margin')
+    def _onchange_profit_margin(self):
+        for classification in self:
+            if classification.profit_margin == 1:
+                raise exceptions.Warning(_("1 is not a valid Profit Margin."))
+            classification.markup = 1 * (classification.profit_margin / (
+                1 - classification.profit_margin))
+
     # Compute Section
+    @api.multi
+    @api.depends('markup')
+    def _compute_profit_margin(self):
+        for classification in self:
+            classification.profit_margin = 1 -\
+                (1 / (classification.markup + 1))
+
     @api.multi
     @api.depends('template_ids.theoretical_difference')
     def _compute_template_different_price_qty(self):

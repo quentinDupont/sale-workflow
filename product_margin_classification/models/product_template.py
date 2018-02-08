@@ -40,16 +40,16 @@ class ProductTemplate(models.Model):
     @api.multi
     @api.depends(
         'standard_price', 'list_price',
-        'margin_classification_id.margin',
+        'margin_classification_id.markup',
         'margin_classification_id.price_round',
         'margin_classification_id.price_surcharge')
     def _compute_theoretical_multi(self):
         for template in self:
             classification = template.margin_classification_id
             if classification:
-                multi = 1 + (classification.margin / 100)
+                multi = 1 + classification.markup
                 for tax in template.taxes_id:
-                    if tax.amount_type != 'percent' or not tax.price_include:
+                    if tax.type != 'percent' or not tax.price_include:
                         raise exceptions.UserError(_(
                             "Unimplemented Feature\n"
                             "The Tax %s is not correctly set for computing"
