@@ -41,6 +41,7 @@ class ProductTemplate(models.Model):
     @api.multi
     @api.depends(
         'standard_price', 'list_price',
+        'fiscal_classification_id',
         'margin_classification_id.markup',
         'margin_classification_id.price_round',
         'margin_classification_id.price_surcharge')

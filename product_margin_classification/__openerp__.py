@@ -12,6 +12,7 @@
     'license': 'AGPL-3',
     'depends': [
         'account',
+        'account_product_fiscal_classification',
     ],
     'data': [
         'security/ir_rule.xml',
